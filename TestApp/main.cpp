@@ -34,8 +34,7 @@ int wmain(int argc, WCHAR* argv[])
    {
         CLRHostInitialize();
 
-        int domainId = 0;
-        CLRHostCreateAppDomain(&domainId);
+        int domainId = CLRHostCreateAppDomain();
 
         CLRHostLoadAssembly(domainId, "SampleAssembly");
 
@@ -45,8 +44,7 @@ int wmain(int argc, WCHAR* argv[])
 
         CLRHostDestroyAppDomain(domainId);
 
-
-        CLRHostCreateAppDomain(&domainId);
+		domainId = CLRHostCreateAppDomain();
 
         CLRHostLoadAssembly(domainId, "SampleAssembly");
 

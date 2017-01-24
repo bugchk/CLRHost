@@ -12,12 +12,12 @@
 // ----------------------------------------------------------------------------------------------
 
 using System;
-using System.Security.Policy;
-using System.Runtime.InteropServices;
 using System.Collections.Generic;
-using System.Reflection;
+using System.Diagnostics;
 using System.Linq;
-
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Security.Policy;
 using System.Threading;
 
 namespace CLRHostAppDomainManager
@@ -26,10 +26,10 @@ namespace CLRHostAppDomainManager
     public interface ICLRHostAppDomainManager
     {
         void InitializeNewDomain(AppDomainSetup appDomainInfo);
-        void Execute(string assemblyFilename);
         int CreateAppDomain();
         bool DestroyAppDomain(int domainId);
         bool LoadAssembly(int domainId, string assemblyFilename);
+        void Execute(string assemblyFilename);
         IntPtr Run(int domainId, string symbolName, IntPtr parameter);
     }
 
@@ -39,21 +39,16 @@ namespace CLRHostAppDomainManager
         private static int _NextDomainId = 0;
         private static Dictionary<int, AppDomain> _Domains = new Dictionary<int, AppDomain>();
 
-        public CLRHostAppDomainManager()
-        {
-            System.Console.WriteLine("*** Instantiated CustomAppDomainManager");
-        }
-
         public override void InitializeNewDomain(AppDomainSetup appDomainInfo)
         {
-            System.Console.WriteLine("*** InitializeNewDomain");
+            Trace.WriteLine("*** InitializeNewDomain");
             this.InitializationFlags = AppDomainManagerInitializationOptions.RegisterWithHost;
         }
 
         public override AppDomain CreateDomain(string friendlyName, Evidence securityInfo, AppDomainSetup appDomainInfo)
         {
             var appDomain = base.CreateDomain(friendlyName, securityInfo, appDomainInfo);
-            System.Console.WriteLine("*** Created AppDomain {0}", friendlyName);
+            Trace.WriteLine("*** Created AppDomain {0}", friendlyName);
             return appDomain;
         }
 
@@ -66,17 +61,11 @@ namespace CLRHostAppDomainManager
 
         public bool DestroyAppDomain(int domainId)
         {
-            if (_Domains.ContainsKey(domainId))
-            {
-                AppDomain.Unload(_Domains[domainId]);
-                _Domains.Remove(domainId);
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-            
+            if (!_Domains.ContainsKey(domainId)) return false;
+
+            AppDomain.Unload(_Domains[domainId]);
+            _Domains.Remove(domainId);
+            return true;
         }
 
         public bool LoadAssembly(int domainId, string assemblyFilename)
@@ -85,29 +74,19 @@ namespace CLRHostAppDomainManager
             return asm != null;
         }
 
-        private Assembly _GetAssemblyByName(int domainId, string name)
-        {
-            return _Domains[domainId].GetAssemblies().
-                   SingleOrDefault(assembly => assembly.GetName().Name == name);
-        }
-
         public IntPtr Run(int domainId, string symbolName, IntPtr parameter)
         {
             try
             {
                 string[] syms = symbolName.Split('.');
-                Assembly asm = _GetAssemblyByName(domainId, syms[0]);
+                Assembly asm = _Domains[domainId].GetAssemblies().
+                                SingleOrDefault(a => a.GetName().Name == syms[0]);
                 string typeName = string.Join(".", syms.Take(syms.Length - 1).ToArray());
                 Type t = asm.GetType(typeName);
-
                 var mi = t.GetMethod(syms[syms.Length - 1]);
                 return (IntPtr)mi.Invoke(null, new object[] { parameter });
             }
-            catch (Exception) 
-            { 
-            
-            }
-
+            catch (Exception){}
             return IntPtr.Zero;
         }
 
@@ -115,9 +94,7 @@ namespace CLRHostAppDomainManager
         {
             if (!System.IO.File.Exists(assemblyFilename))
             {
-                const string message = "Application cannot be found";
-                System.Diagnostics.Trace.WriteLine(message);
-                System.Console.Error.WriteLine(message);
+                Trace.WriteLine("Application cannot be found");
                 return;
             }
 
@@ -126,20 +103,21 @@ namespace CLRHostAppDomainManager
             {
                 domainId = CreateAppDomain();
                 int exitCode = _Domains[domainId].ExecuteAssembly(assemblyFilename);
-                System.Diagnostics.Trace.WriteLine(string.Format("ExitCode={0}", exitCode));
+                Trace.WriteLine(string.Format("ExitCode={0}", exitCode));
             }
             catch (System.Exception)
             {
                 string message = string.Format("Unhandled Exception in {0}",
-                                                System.IO.Path.GetFileNameWithoutExtension(assemblyFilename));
-                System.Console.Error.WriteLine(message);
+                                                System.IO.Path.GetFileNameWithoutExtension(
+                                                    assemblyFilename));
+                Trace.TraceError(message);
             }
             finally
             {
                 if (domainId != -1)
                 {
                     DestroyAppDomain(domainId);
-                    System.Console.WriteLine("*** Unloaded AppDomain {0}", domainId);
+                    Trace.WriteLine(string.Format("*** Unloaded AppDomain {0}", domainId));
                 }
             }
         }

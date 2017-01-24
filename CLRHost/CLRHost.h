@@ -15,8 +15,8 @@
 #include <windows.h>
 
 typedef HRESULT (*_fCLRHostInitialize)();
-typedef HRESULT (*_fCLRHostCreateAppDomain)(OUT int * pDomainId);
-typedef HRESULT (*_fCLRHostDestroyAppDomain)(IN int DomainId);
+typedef INT (*_fCLRHostCreateAppDomain)();
+typedef BOOL (*_fCLRHostDestroyAppDomain)(IN int DomainId);
 typedef HRESULT (*_fCLRHostLoadAssembly)(IN int DomainId, IN LPSTR assemblyPath);
 typedef LONG_PTR (*_fCLRHostRun)(IN int DomainId, IN LPSTR symbolName, IN LONG_PTR parameter);
 typedef HRESULT (*_fCLRHostExecute)(IN int DomainId, IN LPCWSTR assemblyName);
@@ -38,18 +38,18 @@ CLRHostInitialize()
 
     if (pApi == nullptr) return E_FAIL;
 
-    return ((_fCLRHostInitialize)pApi[0])();
+     return ((_fCLRHostInitialize)pApi[0])();
 }
 
 FORCEINLINE 
-HRESULT 
-CLRHostCreateAppDomain(OUT int * pDomainId)
+INT 
+CLRHostCreateAppDomain()
 {
-    return ((_fCLRHostCreateAppDomain)pApi[1])(pDomainId);
+    return ((_fCLRHostCreateAppDomain)pApi[1])();
 }
 
 FORCEINLINE 
-HRESULT 
+BOOL
 CLRHostDestroyAppDomain(IN int DomainId)
 {
     return ((_fCLRHostDestroyAppDomain)pApi[2])(DomainId);

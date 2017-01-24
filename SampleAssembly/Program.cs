@@ -19,7 +19,6 @@ namespace SampleAssembly
     {
         public static void Main(string[] args)
         {
-            System.Console.WriteLine("Program Started");
             Trace.WriteLine("SampleApp1: Enter - Program::Main");
             try
             {
@@ -31,15 +30,14 @@ namespace SampleAssembly
                 Trace.WriteLine("SampleApp1: Catching Exception");
             }
             Trace.WriteLine("SampleApp1: Leave - Program::Main");
-            System.Console.WriteLine("Program Ended");
         }
 
         public static IntPtr Start(IntPtr arg)
         {
-            System.Console.WriteLine("Entering Method Start");
+            Trace.WriteLine("Entering Method Start");
             const int a = 21;
             const int b = 21;
-            System.Console.WriteLine("Leaving Method Start");
+            Trace.WriteLine("Leaving Method Start");
             return new IntPtr(a + b);
         }
     }

@@ -77,26 +77,43 @@ CLRHostInitialize()
    return ERROR_SUCCESS;
 }
 
-
-HRESULT 
-CLRHostCreateAppDomain(OUT int * pDomainId)
+void
+CLRHostDestroy()
 {
-    *pDomainId = pAppDomainManager->CreateAppDomain();
-    return ERROR_SUCCESS;
+	if (pRuntimeInfo != nullptr)
+	{
+		(VOID)pRuntimeHost->Stop();
+		pRuntimeInfo->Release();
+		pRuntimeInfo = nullptr;
+	}
+	if (pRuntimeHost != nullptr)
+	{
+		pRuntimeHost->Release();
+		pRuntimeHost = nullptr;
+	}
+	if (pMetaHost != nullptr)
+	{
+		pMetaHost->Release();
+		pMetaHost = nullptr;
+	}
 }
 
-HRESULT 
+int 
+CLRHostCreateAppDomain()
+{
+    return pAppDomainManager->CreateAppDomain();
+}
+
+BOOL
 CLRHostDestroyAppDomain(IN int DomainId)
 {
-    pAppDomainManager->DestroyAppDomain(DomainId);
-    return ERROR_SUCCESS;
+    return pAppDomainManager->DestroyAppDomain(DomainId);
 }
 
-HRESULT 
+BOOL
 CLRHostLoadAssembly(IN int DomainId, IN LPSTR assemblyPath)
 {
-    pAppDomainManager->LoadAssembly(DomainId, assemblyPath);
-    return ERROR_SUCCESS;
+    return pAppDomainManager->LoadAssembly(DomainId, assemblyPath);
 }
 
 LONG_PTR
@@ -106,20 +123,10 @@ CLRHostRun(IN int DomainId, IN LPSTR symbolName, IN LONG_PTR parameter)
 }
 
 HRESULT 
-CLRHostExecute(IN int DomainId, IN LPSTR assemblyName)
+CLRHostExecute(IN int DomainId, IN LPCWSTR assemblyName)
 {
-    HRESULT hr;
-
-   wprintf_s(L"--- Start ---\n");
-   BSTR assemblyFilename = (TCHAR*)assemblyName;
-
-   BSTR friendlyname = L"TestApp";
-   hr = pAppDomainManager->Execute(assemblyFilename);
-   RETURN_ON_EFAIL(hr);
-
-   wprintf_s(L"--- End ---\n");
-
-   return hr;
+   BSTR assemblyFilename = (WCHAR*)assemblyName;
+   return pAppDomainManager->Execute(assemblyFilename);
 }
 
 BOOLEAN 
@@ -137,25 +144,8 @@ DllMain(
             break;
 
         case DLL_PROCESS_DETACH:
-
             // THIS BELL CANNOT BE UNRUNG 
-            if (pRuntimeInfo != nullptr)
-           {
-              (VOID)pRuntimeHost->Stop();
-              pRuntimeInfo->Release();
-              pRuntimeInfo = nullptr;
-           }
-           if (pRuntimeHost != nullptr)
-           {
-              pRuntimeHost->Release();
-              pRuntimeHost = nullptr;
-           }
-           if (pMetaHost != nullptr)
-           {
-              pMetaHost->Release();
-              pMetaHost = nullptr;
-           }
-
+			CLRHostDestroy();
            break;
     }
 
