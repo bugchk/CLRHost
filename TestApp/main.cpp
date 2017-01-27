@@ -14,13 +14,29 @@
 #include <stdio.h>
 #include <windows.h>
 
-#include "..\CLRHost\CLRHost.h"
+#include "CLRHost.h"
+
+#import "SampleAssembly.tlb" no_namespace named_guids
 
 BOOL FileExists(LPCWSTR szPath) 
 { 
    DWORD dwAttrib = GetFileAttributesW(szPath);
    return (dwAttrib != INVALID_FILE_ATTRIBUTES); 
 } 
+
+LONG_PTR
+_getMorePower(int x)
+{
+	int domainId = CLRHostCreateAppDomain();
+
+	CLRHostLoadAssembly(domainId, "SampleAssembly");
+
+	LONG_PTR result = CLRHostRun(domainId, "SampleAssembly.Program.MorePower", (LONG_PTR)x);
+
+	CLRHostDestroyAppDomain(domainId);
+
+	return (int)result;
+}
 
 int wmain(int argc, WCHAR* argv[])
 {
@@ -34,27 +50,35 @@ int wmain(int argc, WCHAR* argv[])
    {
         CLRHostInitialize();
 
-        int domainId = CLRHostCreateAppDomain();
+		CLRHostExecute("SampleAssembly.exe", "42");
 
-        CLRHostLoadAssembly(domainId, "SampleAssembly");
+		LONG_PTR result;
+		result = _getMorePower(5);
+		wprintf_s(L"SampleAssembly.MorePower: %Id\n", result);
+		result = _getMorePower(7);
+		wprintf_s(L"SampleAssembly.MorePower: %Id\n", result);
 
-        LONG_PTR result = CLRHostRun(domainId, "SampleAssembly.Program.Start", NULL);
+		IHalfPower *pIHalfPower = NULL;
 
-        wprintf_s(L"result %lld\n", result);
+		CoInitialize(NULL);
 
-        CLRHostDestroyAppDomain(domainId);
+		HRESULT hr = CoCreateInstance(	CLSID_HalfPowerManager,
+										NULL, CLSCTX_INPROC_SERVER,
+										__uuidof(IHalfPower), 
+										(PVOID*)&pIHalfPower);
+		if (SUCCEEDED(hr))
+		{
+			result = pIHalfPower->HalfPower(1024);
+			wprintf_s(L"SampleAssembly.HalfPower: %Id\n", result);
 
-		domainId = CLRHostCreateAppDomain();
+			pIHalfPower->Release();
+		}
+		else
+		{
+			wprintf_s(L"CoCreateInstance failed: 0x%08x\n", hr);
+		}
 
-        CLRHostLoadAssembly(domainId, "SampleAssembly");
-
-        result = CLRHostRun(domainId, "SampleAssembly.Program.Start", NULL);
-
-        wprintf_s(L"result %lld\n", result);
-
-        CLRHostDestroyAppDomain(domainId);
-
-
+		CoUninitialize();
         return 0;
    }
    else

@@ -13,15 +13,15 @@
 
 
 #include <stdio.h>
-#include <tchar.h>
 #include <windows.h>
 
 #include <metahost.h>
 #include <mscoree.h>
 #include <corerror.h>
 #include <comdef.h>
+#include <comutil.h>  
 
-#import "../x64/Debug/CLRHostAppDomainManager.tlb"
+#import "CLRHostAppDomainManager.tlb"
 
 using namespace CLRHostAppDomainManager;
 
@@ -63,12 +63,11 @@ CLRHostInitialize()
    hr = pRuntimeHost->SetHostControl(pMyHostControl);
    RETURN_ON_EFAIL(hr);
 
-   LPCWSTR appDomainManagerTypename = L"CLRHostAppDomainManager.CLRHostAppDomainManager";
    LPCWSTR assemblyName = L"CLRHostAppDomainManager";
+   LPCWSTR appDomainManagerTypename = L"CLRHostAppDomainManager.CLRHostAppDomainManager";
    hr = pCLRControl->SetAppDomainManagerType(assemblyName, appDomainManagerTypename);
    RETURN_ON_EFAIL(hr);
 
-   wprintf(L"Running runtime version: %s\n", runtimeVersion);
    hr = pRuntimeHost->Start();
    RETURN_ON_EFAIL(hr);
 
@@ -119,15 +118,26 @@ CLRHostLoadAssembly(IN int DomainId, IN LPSTR assemblyPath)
 LONG_PTR
 CLRHostRun(IN int DomainId, IN LPSTR symbolName, IN LONG_PTR parameter)
 {
-    return pAppDomainManager->Run(DomainId, symbolName, parameter);
+    return (LONG_PTR)pAppDomainManager->Run(DomainId, symbolName, parameter);
+}
+
+BSTR _char_bstr(LPCSTR str)
+{
+	_bstr_t bstr1(str);
+	return bstr1.copy();
 }
 
 HRESULT 
-CLRHostExecute(IN int DomainId, IN LPCWSTR assemblyName)
+CLRHostExecute(IN LPCSTR assemblyName, IN LPCSTR arguments)
 {
-   BSTR assemblyFilename = (WCHAR*)assemblyName;
-   return pAppDomainManager->Execute(assemblyFilename);
+   BSTR assemblyFilename = _char_bstr(assemblyName);
+   BSTR execArgs = _char_bstr(arguments);
+   return pAppDomainManager->Execute(assemblyFilename, execArgs);
 }
+
+HRESULT WINAPI
+__declspec(dllexport)
+DllCanUnloadNow(void) {	return S_FALSE; }
 
 BOOLEAN 
 WINAPI 

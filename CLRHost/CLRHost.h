@@ -17,9 +17,9 @@
 typedef HRESULT (*_fCLRHostInitialize)();
 typedef INT (*_fCLRHostCreateAppDomain)();
 typedef BOOL (*_fCLRHostDestroyAppDomain)(IN int DomainId);
-typedef HRESULT (*_fCLRHostLoadAssembly)(IN int DomainId, IN LPSTR assemblyPath);
-typedef LONG_PTR (*_fCLRHostRun)(IN int DomainId, IN LPSTR symbolName, IN LONG_PTR parameter);
-typedef HRESULT (*_fCLRHostExecute)(IN int DomainId, IN LPCWSTR assemblyName);
+typedef HRESULT (*_fCLRHostLoadAssembly)(IN int DomainId, IN LPCSTR assemblyPath);
+typedef LONG_PTR (*_fCLRHostRun)(IN int DomainId, IN LPCSTR symbolName, IN LONG_PTR parameter);
+typedef HRESULT (*_fCLRHostExecute)(IN LPCSTR assemblyName, LPCSTR arguments);
 
 static PVOID * pApi = nullptr;
 
@@ -57,21 +57,21 @@ CLRHostDestroyAppDomain(IN int DomainId)
 
 FORCEINLINE 
 HRESULT 
-CLRHostLoadAssembly(IN int DomainId, IN LPSTR assemblyPath)
+CLRHostLoadAssembly(IN int DomainId, IN LPCSTR assemblyPath)
 {
     return ((_fCLRHostLoadAssembly)pApi[3])(DomainId, assemblyPath);
 }
 
 FORCEINLINE 
 LONG_PTR
-CLRHostRun(IN int DomainId, IN LPSTR symbolName, IN LONG_PTR parameter)
+CLRHostRun(IN int DomainId, IN LPCSTR symbolName, IN LONG_PTR parameter)
 {
     return ((_fCLRHostRun)pApi[4])(DomainId, symbolName, parameter);
 }
 
 FORCEINLINE 
 HRESULT 
-CLRHostExecute(IN int DomainId, IN LPCWSTR assemblyName)
+CLRHostExecute(IN LPCSTR assemblyName, IN LPCSTR arguments = NULL)
 {
-    return ((_fCLRHostExecute)pApi[5])(DomainId, assemblyName);
+    return ((_fCLRHostExecute)pApi[5])(assemblyName, arguments);
 }

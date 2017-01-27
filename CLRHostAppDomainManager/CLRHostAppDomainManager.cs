@@ -26,22 +26,20 @@ namespace CLRHostAppDomainManager
     public interface ICLRHostAppDomainManager
     {
         void InitializeNewDomain(AppDomainSetup appDomainInfo);
+
         int CreateAppDomain();
         bool DestroyAppDomain(int domainId);
         bool LoadAssembly(int domainId, string assemblyFilename);
-        void Execute(string assemblyFilename);
+
+        void Execute(string assemblyFilename, string arguments);
         IntPtr Run(int domainId, string symbolName, IntPtr parameter);
     }
 
     [GuidAttribute("0a437314-63e5-43f9-a912-56c1a8bd65ae"), ComVisible(true)]
     public sealed class CLRHostAppDomainManager : AppDomainManager, ICLRHostAppDomainManager
     {
-        private static int _NextDomainId = 0;
-        private static Dictionary<int, AppDomain> _Domains = new Dictionary<int, AppDomain>();
-
         public override void InitializeNewDomain(AppDomainSetup appDomainInfo)
         {
-            Trace.WriteLine("*** InitializeNewDomain");
             this.InitializationFlags = AppDomainManagerInitializationOptions.RegisterWithHost;
         }
 
@@ -51,6 +49,11 @@ namespace CLRHostAppDomainManager
             Trace.WriteLine("*** Created AppDomain {0}", friendlyName);
             return appDomain;
         }
+
+        #region Create/Destroy/Load Assemblies
+
+        private static int _NextDomainId = 0;
+        private static Dictionary<int, AppDomain> _Domains = new Dictionary<int, AppDomain>();
 
         public int CreateAppDomain()
         {
@@ -74,6 +77,10 @@ namespace CLRHostAppDomainManager
             return asm != null;
         }
 
+        #endregion
+
+        #region Execute Managed Code
+
         public IntPtr Run(int domainId, string symbolName, IntPtr parameter)
         {
             try
@@ -90,7 +97,7 @@ namespace CLRHostAppDomainManager
             return IntPtr.Zero;
         }
 
-        public void Execute(string assemblyFilename)
+        public void Execute(string assemblyFilename, string arguments)
         {
             if (!System.IO.File.Exists(assemblyFilename))
             {
@@ -98,11 +105,17 @@ namespace CLRHostAppDomainManager
                 return;
             }
 
+            string[] args = new string[] { };
+            if (! string.IsNullOrEmpty(arguments))
+            {
+                args = arguments.Split(' ');
+            }
+
             int domainId = -1;
             try
             {
                 domainId = CreateAppDomain();
-                int exitCode = _Domains[domainId].ExecuteAssembly(assemblyFilename);
+                int exitCode = _Domains[domainId].ExecuteAssembly(assemblyFilename, args);
                 Trace.WriteLine(string.Format("ExitCode={0}", exitCode));
             }
             catch (System.Exception)
@@ -121,6 +134,9 @@ namespace CLRHostAppDomainManager
                 }
             }
         }
+
+        #endregion
+
     }
 }
 
